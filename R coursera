@@ -1,4 +1,4 @@
-#pollution mean- Coursera (week-2)
+#pollutant mean- Coursera (week-2)
 pollutantmean <- function (directory, pollutant, id = 1:332){
 		filelist <- list.files(path = directory, pattern = "csv", full.names = TRUE)
  		values <- numeric()
