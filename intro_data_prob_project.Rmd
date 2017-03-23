@@ -1,0 +1,193 @@
+---
+title: "Exploring the BRFSS data"
+output:
+  html_document:
+    fig_height: 4
+    highlight: pygments
+    theme: spacelab
+  pdf_document: default
+---
+
+## Setup
+
+### Load packages
+
+```{r load-packages, message = FALSE}
+library(ggplot2)
+library(dplyr)
+```
+
+
+#Part 1
+
+#We can not actually make casula relationship if they are not from same people or location or many other factors. This is caleed bias. But for the purpose to learning we will make assumption and go with the project.
+#As Data comes from people who were willing to answer the question, the sample is subjected to non-response bias as well.
+#The data is non-representation of entire population.
+### Load data
+```{r load-data}
+load("brfss2013.RData")
+```
+
+```{r}
+names(brfss2013)
+```
+
+
+* * *
+
+## Part 1: Data
+#Looking at data stucture. What are the types of variables in the data.
+```{r}
+str(brfss2013)
+```
+```{r}
+View(brfss2013)
+```
+## Part 2: Research questions
+
+**Research quesion 1:**
+# Question 1 - What is the effect on general health of people who do not do execrcise and felt restlessness?
+# To find the result we pick the variables or questions asked to people whether they felt restlessnes, General health (genhlth), Leisure Time Physical Activity Calculated Variable(_totinda)
+```{r}
+grep("totinda", names(brfss2013),  value = TRUE)
+```
+# As _totinda starts with  special character R changes its name. First we found the variable.
+#Then we look at the selected data
+```{r}
+brfss2013 %>% 
+  select(genhlth,misrstls,X_totinda) %>%
+  str()
+```
+#Now, We start analysis with filtering all NA values and then filtering those who did not do any exercise in past 30 days.
+# We also filter out those who did not feel any restlessness bacause we want to find out wheather their answer or feeling was related to their health or general health. Do those who exercise also feel restlesness or it is just a feeling and has nothing do with exercise and what are the affects on general health. Although we can not make conjecture on all these questions but for the purpose of the project we will make do. 
+
+
+
+```{r, No exercise}
+health1 <- brfss2013 %>% 
+  select(genhlth,misrstls,X_totinda) %>%
+  filter(!is.na(misrstls), !is.na(X_totinda), !is.na(genhlth), as.numeric(X_totinda) == 2, misrstls != "None"  ) %>%
+  group_by(genhlth) %>%
+  summarise(count=n()) %>%
+  print(health1)
+qplot(health1$genhlth,health1$count, xlab = "General Health", ylab = "count")
+```
+
+# Now, lets see for those who said have done exercise.
+
+```{r}
+health2 <-brfss2013 %>% 
+  select(genhlth,misrstls,X_totinda) %>%
+  filter(!is.na(misrstls), !is.na(X_totinda), !is.na(genhlth), as.numeric(X_totinda) == 1, misrstls != "None"  ) %>%
+  group_by(genhlth) %>%
+  summarise(count=n()) %>%
+  print(health2)
+  qplot(health2$genhlth,health2$count, xlab = "General Health", ylab = "count")
+```
+# from above observations we can concluse that, Even though people have been feeling restlessness but those who do exercise have (or at least they think) have good to excellent haealth compared to those who do not do any exercise.
+
+
+
+**Research quesion 2:**
+#What are the affects on income level of general health? What is the effect from not having the health plan
+
+
+* * *
+
+
+#What are the efects of income level on health plan? And about genral health?
+```{r}
+brfss2013 %>% 
+  select(hlthpln1,income2,genhlth) %>%
+  str()
+```
+```{r}
+brfss2013 %>%
+  select(income2) %>%
+  str()
+```
+
+#First we find out for those whose income level is less than $10,00 and do not have heallth plan. We filter for the people who fell Excellent and Very good. 
+```{r}
+healthtype1 <- c("Excellent","Very Good")
+var1 <- brfss2013 %>% 
+  select( hlthpln1,income2, genhlth) %>% 
+  filter(!is.na(income2), (hlthpln1 == "No"), !is.na(genhlth),(genhlth ==healthtype1) ) %>%
+  
+  group_by(income2) %>%
+  summarise(count=n()) %>%
+  print(var1)
+
+qplot((var1$income2),var1$count, xlab = "Income Level", ylab = "Count", margins = TRUE)
+
+ ggplot(var1, aes(x = as.numeric(var1$income2), y = var1$count)) +
+  geom_point() +geom_line() + scale_x_discrete(labels=var1$income2) 
+```
+
+# As we can see that Those who feel excellent and very good have higher income level. But there is a dip at the end. There could be many resons such as the higher earners may be old people or may have refused to answer or private plans.
+
+#next we filter out those who feel fair and good. All of these people do not have health paln.
+
+```{r}
+ healthtype2 <- c("Fair","Good")
+var2 <-brfss2013 %>% 
+  select( hlthpln1,income2, genhlth) %>% 
+  filter(!is.na(income2), (hlthpln1 == "No"), !is.na(genhlth),(genhlth ==healthtype2)) %>%
+  
+  group_by(income2) %>%
+  summarise(count=n()) %>%
+  print(var2)
+qplot((var2$income2),var2$count, xlab = "Income Level", ylab = "Count", margins = TRUE)
+ggplot(var2, aes(x = as.numeric(var2$income2), y = var2$count)) +
+  geom_point() +geom_line() + scale_x_discrete(labels=var2$income2) 
+```
+
+# We can see from both the graphs of abobe two groups the income level has reduced as the health deteoriate. People in higher income level are less in number compared to those in mid or lower level. 
+
+#Now filter for those who feel poor in health.
+
+```{r}
+var3 <- brfss2013 %>% 
+  select( hlthpln1,income2, genhlth) %>% 
+  filter(!is.na(income2), (hlthpln1 == "No"), !is.na(genhlth),(genhlth == "Poor")) %>%
+  
+  group_by(income2) %>%
+  summarise(count=n())%>%
+  print(var)
+qplot((var3$income2),var3$count, xlab = "Income Level", ylab = "Count", margins = TRUE)
+```
+# From above tests we can conclude that for thosw who do not have health plan are lower in income levels and in poor, fair good health but in higher income level people re generally good health.
+
+
+
+
+**Research quesion 3:**
+
+# Are women more prone to heart deseases such as heart attacks and strokes compared to women?
+# To answer that we take three variables sex,Ever Diagnosed With Angina Or Coronary Heart Disease(cvdcrhd4), Ever Diagnosed With Heart Attack (cvdinfr4), Ever Diagnosed With A Stroke(cvdstrk3).
+#First lets look at the data stuctures.
+```{r}
+brfss2013 %>%
+  select(sex,cvdinfr4,cvdstrk3,cvdcrhd4) %>%
+  str()
+```
+# Now lets filter for male first. 
+# And filter all NA values.
+```{r}
+brfss2013 %>%
+  select(sex,cvdinfr4,cvdstrk3,cvdcrhd4) %>%
+  filter(!is.na(cvdinfr4),!is.na(cvdcrhd4), !is.na(cvdstrk3), !is.na(sex)) %>%
+  filter((cvdinfr4 == "Yes") | ( cvdcrhd4 == "Yes") | (cvdstrk3 == "Yes")) %>%
+  group_by(sex) %>%
+  summarise(count=n())
+```
+
+
+#We can see women are more prone to heart diseases than men.
+
+
+```{r}
+higherd <- ((28660-25948)/(28660+25948))*100
+print(higherd)
+```
+#we can see from the result  that women are 4.96% more diagnosed with heart deseases than males.
